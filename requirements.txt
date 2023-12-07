@@ -1,0 +1,10 @@
+faiss-cpu
+leveldb
+ftfy
+tqdm
+streamlit
+torch
+torchvision
+numpy
+transformers
+./tpu_perf-1.2.17-py3-none-manylinux2014_aarch64.whl
