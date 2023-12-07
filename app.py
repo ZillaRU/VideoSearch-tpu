@@ -15,7 +15,7 @@ def load_model(lang):
 @st.cache_resource
 def load_database(lang):
     if os.path.exists(f'./{lang}_faiss_index.index'):
-        set_value('faiss_index', faiss.read_index(f'./{lang}_faiss_index.index'))
+        set_value('faiss_index', faiss.read_index(f'./{lang}/scene_faiss_index.index'))
         print('Faiss index loaded')
     else:
         print('Faiss index not found')
@@ -27,9 +27,9 @@ if __name__ == '__main__':
     assert lang in ['EN', 'CH']
     
     _init(lang)
-    
-    load_model(lang)
-    load_database(lang)
+    if get_value('lang') != lang:
+        load_model(lang)
+        load_database(lang)
 
     from inference.video_features import video_features
 
@@ -42,6 +42,7 @@ if __name__ == '__main__':
 
     # 根据选择的Tab显示不同的内容
     if selected_tab == "Upload Video":
+        st.session_state['add_video'] = None
         def add_video_to_index(uploaded_videos):
             if uploaded_videos is not None and uploaded_videos != []:
                 for file in uploaded_videos:
@@ -53,7 +54,7 @@ if __name__ == '__main__':
                     
                     # insert video metadata
                     video_id = str(uuid.uuid4())
-                    insert_video_metadata(video_id,  file_path)
+                    insert_video_metadata(video_id, file_path)
 
                     # insert scene2video and video2scene
                     scene_ids = [str(uuid.uuid4()) for _ in range(len(scenes))]
@@ -66,8 +67,12 @@ if __name__ == '__main__':
                     
         with st.form("upload_form"):
             uploaded_videos = st.file_uploader("Select Video", accept_multiple_files=True, type=['mp4', 'avi', 'mov'])
-            submit_button = st.form_submit_button("Submit", on_click=add_video_to_index)
-
+            submit_button = st.form_submit_button("Submit") # , on_click=add_video_to_index)
+        if submit_button:
+            st.session_state.add_video=True
+        
+        if st.session_state.add_video:
+            add_video_to_index(uploaded_videos)
 
                 # scene_ids = []
                 # for f in scene_clip_embeddings:

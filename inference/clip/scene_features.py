@@ -46,6 +46,7 @@ class SceneFeatures:
         return d
 
     def scene_features(self, video_path: str, no_of_samples: int = 3) -> typing.Dict:
+        print(f'Collecting scenes in {video_path}')
         scenes = self.collect_scenes_in_video(video_path)
 
         cap = cv2.VideoCapture(video_path)
@@ -85,4 +86,4 @@ class SceneFeatures:
 
             scene_clip_embeddings.append(torch.mean(torch.stack(clip_img_emb_list), dim=0))      
 
-        return scenes, scene_clip_embeddings
+        return scenes, torch.vstack(scene_clip_embeddings)

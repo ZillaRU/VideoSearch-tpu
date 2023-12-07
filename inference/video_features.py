@@ -18,13 +18,7 @@ def local_path(path_uri: str) -> str:
 
 def video_features(path_uri: str) -> str:
     system_path = local_path(path_uri)
-    
-    features = {
-        'scene_features': sf.scene_features(system_path),
-        'video_duration': get_video_duration(system_path),
-    }
-    import pdb; pdb.set_trace()
-    return json.dumps(features)
+    return sf.scene_features(system_path)
 
 def _video_features(filepaths: list) -> list:
     return [_video_features(f.getvalue()) for f in filepaths]

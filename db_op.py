@@ -2,6 +2,10 @@ import json
 import leveldb
 import uuid
 from inference.global_dict import get_value
+import pickle
+import numpy as np
+import faiss
+
 
 """
 Index diagrams
@@ -38,7 +42,7 @@ def insert_scene2video(sceneIDs, videoIDs):
     for k,v in zip(sceneIDs, videoIDs):
         batch.Put(k.encode('utf-8'), v.encode('utf-8'))   
     # 执行批量插入操作  
-    level_instance.write(batch)
+    level_instance.Write(batch, sync=True) # level_instance.write(batch)
 
 def get_video_by_scene_id(id):
     level_instance = leveldb.LevelDB('./dbs/scene_video_index')
@@ -79,7 +83,7 @@ def create_faiss_index(scene_list, embedding_list, embeddings_path, index_path):
     index = faiss.index_factory(embeddings.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
     index.add(embeddings)
     # save index
-    faiss.write_index(index, save_path)
+    faiss.write_index(index, index_path)
 
 def update_faiss_index(new_scene_list, new_embedding_list, embeddings_path, index_path):
     with open(embeddings_path, 'rb') as f:
