@@ -1,0 +1,5 @@
+/dbs/*
+/doc
+*__pycache__*
+*.mp4
+*.bmodel
