@@ -101,31 +101,30 @@ if __name__ == '__main__':
             st.warning('No Faiss index found. Please upload video first.')
         else:
             search_query = st.text_input("Keywords")
-            if search_query is not None and search_query.split() != []:
+            if search_query is not None and not search_query.isspace():
                 # 在这里添加视频检索的代码
-                import pdb; pdb.set_trace()
                 search_query = get_value('clip_text_preprocess')(search_query)
                 paths, distances = search_videos(search_query, get_value('scene_list'))
 
                 # 显示搜索结果
                 for p, d in zip(paths, distances):
-                    st.write(f"Distance: {d} | Video: {p}")
+                    st.write(f"Video: {p}\nDistance: {d}\n")
                 
     elif selected_tab == "Search Video by Image":
-        pass
-        # st.title("图片检索")
-        # set_value('faiss_index', '.')
-        # # 在form中填入搜索关键字并提交
-        # with st.form("图片检索"):
-        #     search_query = st.text_input("输入搜索词")
-        #     btn = st.form_submit_button("搜索")
+        # 在form中填入搜索关键字并提交
+        load_database(lang)
+        if get_value('faiss_index') is None:
+            st.warning('No Faiss index found. Please upload video first.')
+        else:
+            search_query = None
+            uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
+            if uploaded_file is not None:
+                img = Image.open(uploaded_file).convert('RGB')
+                st.image(img, width=256)
+                # 在这里添加视频检索的代码
+                search_query = get_value('clip_img_preprocess')(img).unsqueeze(0)
+                paths, distances = search_videos(search_query, get_value('scene_list'))
 
-        #     # 处理form提交的函数
-        #     if btn:
-        #         # 在这里添加图片检索的代码
-        #         search_results = search_images(search_query)
-                
-        #         # 显示搜索结果
-        #         for result in search_results:
-        #             st.write(f"图片名称：{result['name']}")
-        #             st.write(f"图片路径：{result['path']}")
+                # 显示搜索结果
+                for p, d in zip(paths, distances):
+                    st.write(f"Video: {p}\nDistance: {d}\n")
