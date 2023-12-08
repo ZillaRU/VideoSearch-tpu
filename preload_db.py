@@ -9,6 +9,6 @@ def load_faiss_db(faiss_index_path, embeddings_path):
     # load embeddings
     with open(embeddings_path, 'rb') as f:
         results = pickle.load(f)
-    scene_list = results['scene_id']
+    scene_list = results['scene_ids']
     print("============== Embedding dataset is ready. ==============")
     return index, scene_list

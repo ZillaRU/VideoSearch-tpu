@@ -13,6 +13,8 @@ from tqdm import tqdm
 from .model import CLIP
 
 from .simple_tokenizer import SimpleTokenizer as _Tokenizer
+
+
 _en_tokenizer = _Tokenizer()
 def en_tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: bool = True) -> Union[torch.IntTensor, torch.LongTensor]:
     """
@@ -59,7 +61,7 @@ def en_tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate
 
 from tokenizers import Tokenizer
 _tokenizer = Tokenizer.from_file("./inference/clip_model/saved_tokenizer/bert_chinese_tokenizer-fast/fast_tokenizer.json")
-def cn_tokenize(texts: Union[str, List[str]], context_length: int = 52, truncate: bool = True) -> Union[torch.IntTensor, torch.LongTensor]:
+def ch_tokenize(texts: Union[str, List[str]], context_length: int = 52, truncate: bool = True) -> Union[torch.IntTensor, torch.LongTensor]:
     tokens_and_encodings = _tokenizer.encode_batch(
         texts,
         add_special_tokens=True,

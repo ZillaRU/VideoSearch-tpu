@@ -3,40 +3,46 @@ import os
 import streamlit as st
 from db_op import *
 import sys
-from inference.clip_model import load
+from inference.clip_model import load, en_tokenize, ch_tokenize
+from preload_db import load_faiss_db
 
-@st.cache_resource
+
+# @st.cache_resource
 def load_model(lang):
     model, preprocess = load(name=lang)
     set_value('lang', lang)
     set_value('clip_model', model)
     set_value('clip_img_preprocess', preprocess)
+    set_value('clip_text_preprocess', en_tokenize if lang == 'EN' else ch_tokenize)
+    print('Clip model loaded')
 
-@st.cache_resource
+# @st.cache_resource
 def load_database(lang):
-    if os.path.exists(f'./{lang}_faiss_index.index'):
-        set_value('faiss_index', faiss.read_index(f'./{lang}/scene_faiss_index.index'))
-        print('Faiss index loaded')
+    if os.path.exists(f'./dbs/{lang}/scene_faiss_index.index') and os.path.exists(f'./dbs/{lang}/scene_embeddings.pkl'):
+        index, scene_list = load_faiss_db(f'./dbs/{lang}/scene_faiss_index.index', f'./dbs/{lang}/scene_embeddings.pkl')
+        set_value('faiss_index', index)
+        set_value('scene_list', scene_list)
+        print('Embedding dataset loaded. Faiss index loaded')
     else:
         print('Faiss index not found')
         set_value('faiss_index', None)
+        set_value('scene_list', None)
 
 
 if __name__ == '__main__':
     lang = sys.argv[1]
     assert lang in ['EN', 'CH']
     
-    _init(lang)
+    _init()
     if get_value('lang') != lang:
         load_model(lang)
-        load_database(lang)
 
     from inference.video_features import video_features
 
     # 创建一个侧边栏
     st.sidebar.title("🤩VideoSearch powered by Airbox")
     # 添加一个选项控件，用于选择当前显示的Tab
-    selected_tab = st.sidebar.selectbox("Select", ["Upload Video", "Search Video"])
+    selected_tab = st.sidebar.selectbox("Select", ["Upload Video", "Search Video by Text", "Search Video by Image"])
 
     VIDEO_COLLECTION = './video_collection'
 
@@ -62,8 +68,10 @@ if __name__ == '__main__':
                     insert_video_scene(video_id, scene_ids)
 
                     # insert scene embeddings
-                    create_faiss_index(scene_ids, scene_clip_embeddings, f'./dbs/{lang}/scene_embeddings.pkl', f'./dbs/{lang}/scene_faiss_index.index')
-                    load_database(lang)
+                    if os.path.exists(f'./dbs/{lang}/scene_embeddings.pkl') and os.path.exists(f'./dbs/{lang}/scene_faiss_index.index'):
+                        update_faiss_index(scene_ids, scene_clip_embeddings, f'./dbs/{lang}/scene_embeddings.pkl', f'./dbs/{lang}/scene_faiss_index.index')
+                    else:
+                        create_faiss_index(scene_ids, scene_clip_embeddings, f'./dbs/{lang}/scene_embeddings.pkl', f'./dbs/{lang}/scene_faiss_index.index')
                     
         with st.form("upload_form"):
             uploaded_videos = st.file_uploader("Select Video", accept_multiple_files=True, type=['mp4', 'avi', 'mov'])
@@ -84,20 +92,40 @@ if __name__ == '__main__':
                 #     scene_embedding_index.insert(scene_id, content)
 
                 # insert_video_scene(video_id, scene_ids)
-    elif selected_tab == "视频检索":
-        st.title("视频检索")
-        set_value('faiss_index', '.')
+    elif selected_tab == "Search Video by Text":
         # 在form中填入搜索关键字并提交
-        with st.form("视频检索"):
-            search_query = st.text_input("输入搜索词")
-            btn = st.form_submit_button("搜索")
-        
-            # 处理form提交的函数
-            if btn:
+        if get_value('faiss_index') is None:
+            load_database(lang)
+            print(get_value('faiss_index'))
+        if get_value('faiss_index') is None:
+            st.warning('No Faiss index found. Please upload video first.')
+        else:
+            search_query = st.text_input("Keywords")
+            if search_query is not None and search_query.split() != []:
                 # 在这里添加视频检索的代码
-                search_results = search_videos(search_query)
-                
+                import pdb; pdb.set_trace()
+                search_query = get_value('clip_text_preprocess')(search_query)
+                paths, distances = search_videos(search_query, get_value('scene_list'))
+
                 # 显示搜索结果
-                for result in search_results:
-                    st.write(f"视频名称：{result['name']}")
-                    st.write(f"视频路径：{result['path']}")
+                for p, d in zip(paths, distances):
+                    st.write(f"Distance: {d} | Video: {p}")
+                
+    elif selected_tab == "Search Video by Image":
+        pass
+        # st.title("图片检索")
+        # set_value('faiss_index', '.')
+        # # 在form中填入搜索关键字并提交
+        # with st.form("图片检索"):
+        #     search_query = st.text_input("输入搜索词")
+        #     btn = st.form_submit_button("搜索")
+
+        #     # 处理form提交的函数
+        #     if btn:
+        #         # 在这里添加图片检索的代码
+        #         search_results = search_images(search_query)
+                
+        #         # 显示搜索结果
+        #         for result in search_results:
+        #             st.write(f"图片名称：{result['name']}")
+        #             st.write(f"图片路径：{result['path']}")
