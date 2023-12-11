@@ -4,8 +4,10 @@ import streamlit as st
 from db_op import *
 import sys
 from inference.clip_model import load, en_tokenize, ch_tokenize
+from inference.clip_model.clip import _transform
 from preload_db import load_faiss_db
 from time import strftime, gmtime
+from PIL import Image
 
 
 @st.cache_resource
@@ -120,10 +122,11 @@ if __name__ == '__main__':
             st.warning('No Faiss index found. Please upload video first.')
         else:
             search_query = None
-            uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
+            uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'], accept_multiple_files=False)
             if uploaded_file is not None:
                 img = Image.open(uploaded_file).convert('RGB')
                 st.image(img, width=256)
                 # 在这里添加视频检索的代码
+                preprocess = _transform()
                 search_query = preprocess(img).unsqueeze(0)
                 query_and_showresults(search_query, model, get_value('scene_list'), query_mode='image')
