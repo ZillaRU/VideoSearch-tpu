@@ -37,7 +37,6 @@ def get_video_metadata_by_id(id):
     return json.loads(b.decode('utf-8'))
 
 def insert_scene_metadata(sceneID, data):
-    data = (data[0].get_timecode(), data[1].get_timecode())
     b = json.dumps(data)
     level_instance = leveldb.LevelDB('./dbs/scenemetadata_index', create_if_missing=True)
     level_instance.Put(sceneID.encode('utf-8'), b.encode('utf-8'))
@@ -59,6 +58,7 @@ def insert_scene2video(sceneIDs, videoIDs):
     batch = leveldb.WriteBatch()  
     # 添加多个键值对到batch中  
     for k,v in zip(sceneIDs, videoIDs):
+        # level_instance.Put(k.encode('utf-8'), v.encode('utf-8'))
         batch.Put(k.encode('utf-8'), v.encode('utf-8'))   
     # 执行批量插入操作  
     level_instance.Write(batch, sync=True) # level_instance.write(batch)
@@ -128,12 +128,12 @@ def update_faiss_index(new_scene_list, new_embedding_list, embeddings_path, inde
     # faiss.write_index(index, index_path)
 
 # todo: using faiss
-def search_videos(query, scene_list, top_n=2, query_mode='text'):
+def search_videos(query, model, scene_list, top_n=2, query_mode='text'):
     query_emb = None
     if query_mode == 'text':
-        query_emb = get_value('clip_model').encode_text(query)[0]
+        query_emb = model.encode_text(query)[0]
     elif query_mode == 'image':
-        query_emb = get_value('clip_model').encode_image(query)[0]
+        query_emb = model.encode_image(query)[0]
     
     if query_emb is not None:
         D, I = get_value('faiss_index').search(query_emb.unsqueeze(0).numpy(), top_n)

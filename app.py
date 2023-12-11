@@ -5,17 +5,18 @@ from db_op import *
 import sys
 from inference.clip_model import load, en_tokenize, ch_tokenize
 from preload_db import load_faiss_db
+from time import strftime, gmtime
 
 
 @st.cache_resource
 def load_model(lang):
     model = load(name=lang)
-    set_value('lang', lang)
-    set_value('clip_model', model)
     print('Clip model loaded')
+    return model
 
 # @st.cache_resource
 def load_database(lang):
+    _init()
     if os.path.exists(f'./dbs/{lang}/scene_faiss_index.index') and os.path.exists(f'./dbs/{lang}/scene_embeddings.pkl'):
         index, scene_list = load_faiss_db(f'./dbs/{lang}/scene_faiss_index.index', f'./dbs/{lang}/scene_embeddings.pkl')
         set_value('faiss_index', index)
@@ -26,14 +27,26 @@ def load_database(lang):
         set_value('faiss_index', None)
         set_value('scene_list', None)
 
+def query_and_showresults(query, model, scene_list, query_mode, top_n=2):
+    query_res = search_videos(search_query, model, get_value('scene_list'), query_mode=query_mode, top_n=top_n)
+    if query_res is not None:
+        scene_ids, paths, distances = query_res
+
+        for idx in range(len(scene_ids)):
+            st.image(f'./scene_snapshot/{scene_ids[idx]}.jpg', width=256)
+            st_ed = get_scene_metadata_by_id(scene_ids[idx])
+            st.write({
+                'video_path': paths[idx],
+                'distance': distances[idx],
+                'duration': f'{strftime("%H:%M:%S", gmtime(5555))} ~ {strftime("%H:%M:%S", gmtime(5555))}'
+            })
+
 
 if __name__ == '__main__':
     lang = sys.argv[1]
     assert lang in ['EN', 'CH']
     
-    _init()
-    if get_value('lang') != lang:
-        load_model(lang)
+    model = load_model(lang)
 
     from inference.video_features import video_features
 
@@ -57,14 +70,15 @@ if __name__ == '__main__':
                     with open(file_path, "wb") as f:
                         f.write(file.read())
                     st.write(f"File saved to {file_path}")
-                    scenes, scene_ids, scene_clip_embeddings = video_features(file_path)
+                    scenes, scene_ids, scene_clip_embeddings = video_features(model, file_path)
+                    print(f'{len(scenes)} scenes are detected in {file_path}')
                     
                     # insert video metadata
                     video_id = str(uuid.uuid4())
                     insert_video_metadata(video_id, file_path)
 
                     # insert scene2video and video2scene
-                    insert_scene2video(scene_ids, [video_id * len(scene_clip_embeddings)])
+                    insert_scene2video(scene_ids, [video_id] * len(scene_clip_embeddings))
                     insert_video_scene(video_id, scene_ids)
 
                     # insert scene metadata
@@ -95,19 +109,10 @@ if __name__ == '__main__':
             st.warning('No Faiss index found. Please upload video first.')
         else:
             search_query = st.text_input("Keywords")
-            if search_query is not None and not search_query.isspace():
+            if search_query is not None and search_query!= '' and not search_query.isspace():
                 # 在这里添加视频检索的代码
                 search_query = en_tokenize(search_query) if lang == 'EN' else ch_tokenize(search_query)
-                query_res = search_videos(search_query, get_value('scene_list'))
-                if query_res is not None:
-                    scene_ids, paths, distances = query_res
-
-                    for idx in range(len(scene_ids)):
-                        st.write(f"Video: {paths[idx]}\n Distance: {distances[idx]}")
-                        st.image(f'./scene_snapshot/{scene_ids[idx]}.jpg')
-                        st_ed = get_scene_metadata_by_id(scene_ids[idx])
-                        st.write(st_ed)
-                
+                query_and_showresults(search_query, model, get_value('scene_list'), query_mode='text')
     elif selected_tab == "Search Video by Image":
         # 在form中填入搜索关键字并提交
         load_database(lang)
@@ -121,12 +126,4 @@ if __name__ == '__main__':
                 st.image(img, width=256)
                 # 在这里添加视频检索的代码
                 search_query = preprocess(img).unsqueeze(0)
-                query_res = search_videos(search_query, get_value('scene_list'))
-                if query_res is not None:
-                    scene_ids, paths, distances = query_res
-                    # 显示搜索结果
-                    for idx in range(len(scene_ids)):
-                        st.write(f"Video: {paths[idx]}\n Distance: {distances[idx]}")
-                        st.image(f'./scene_snapshot/{scene_ids[idx]}.jpg')
-                        st_ed = get_scene_metadata_by_id(scene_ids[idx])
-                        st.write(st_ed)
+                query_and_showresults(search_query, model, get_value('scene_list'), query_mode='image')

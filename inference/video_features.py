@@ -16,9 +16,9 @@ def local_path(path_uri: str) -> str:
     
     return generic_web_downloader(path_uri, '/tmp', filename)
 
-def video_features(path_uri: str) -> str:
+def video_features(model, path_uri: str) -> str:
     system_path = local_path(path_uri)
-    return sf.scene_features(system_path)
+    return sf.scene_features(model, system_path)
 
 def _video_features(filepaths: list) -> list:
     return [_video_features(f.getvalue()) for f in filepaths]

@@ -88,7 +88,7 @@ def _convert_image_to_rgb(image):
     return image.convert("RGB")
 
 
-def _transform(n_px):
+def _transform(n_px=224):
     return Compose([
         Resize(n_px, interpolation=BICUBIC),
         CenterCrop(n_px),
@@ -114,19 +114,11 @@ def load(name: str, device: str="tpu", batch_size: int=1, processing=False):
     device : Union[str, torch.device]
         The device to put the loaded model
 
-    jit : bool
-        Whether to load the optimized JIT model or more hackable non-JIT model (default).
-
-    download_root: str
-        path to download the model files; by default, it uses "~/.cache/clip"
-
     Returns
     -------
     model : torch.nn.Module
         The CLIP model
 
-    preprocess : Callable[[PIL.Image], torch.Tensor]
-        A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
     model = CLIP(name=name, batch_size=batch_size, is_processing=processing)
-    return model, _transform(n_px=224)
+    return model
