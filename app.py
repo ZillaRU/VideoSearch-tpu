@@ -7,13 +7,11 @@ from inference.clip_model import load, en_tokenize, ch_tokenize
 from preload_db import load_faiss_db
 
 
-# @st.cache_resource
+@st.cache_resource
 def load_model(lang):
-    model, preprocess = load(name=lang)
+    model = load(name=lang)
     set_value('lang', lang)
     set_value('clip_model', model)
-    set_value('clip_img_preprocess', preprocess)
-    set_value('clip_text_preprocess', en_tokenize if lang == 'EN' else ch_tokenize)
     print('Clip model loaded')
 
 # @st.cache_resource
@@ -53,19 +51,25 @@ if __name__ == '__main__':
             if uploaded_videos is not None and uploaded_videos != []:
                 for file in uploaded_videos:
                     file_path = os.path.join(VIDEO_COLLECTION, file.name)
+                    if os.path.exists(file_path):
+                        st.warning(f"File {file_path} already exists. Skipping...")
+                        return
                     with open(file_path, "wb") as f:
                         f.write(file.read())
                     st.write(f"File saved to {file_path}")
-                    scenes, scene_clip_embeddings = video_features(file_path)
+                    scenes, scene_ids, scene_clip_embeddings = video_features(file_path)
                     
                     # insert video metadata
                     video_id = str(uuid.uuid4())
                     insert_video_metadata(video_id, file_path)
 
                     # insert scene2video and video2scene
-                    scene_ids = [str(uuid.uuid4()) for _ in range(len(scenes))]
                     insert_scene2video(scene_ids, [video_id * len(scene_clip_embeddings)])
                     insert_video_scene(video_id, scene_ids)
+
+                    # insert scene metadata
+                    for scene_id, scene in zip(scene_ids, scenes):
+                        insert_scene_metadata(scene_id, scene)
 
                     # insert scene embeddings
                     if os.path.exists(f'./dbs/{lang}/scene_embeddings.pkl') and os.path.exists(f'./dbs/{lang}/scene_faiss_index.index'):
@@ -82,16 +86,6 @@ if __name__ == '__main__':
         if st.session_state.add_video:
             add_video_to_index(uploaded_videos)
 
-                # scene_ids = []
-                # for f in scene_clip_embeddings:
-                #     scene_id = str(uuid.uuid4())
-                #     with open(f, mode='rb') as file:
-                #         content = file.read()
-                #         insert_scene_embeddings(scene_id, content)
-                #     scene_ids.append(scene_id)
-                #     scene_embedding_index.insert(scene_id, content)
-
-                # insert_video_scene(video_id, scene_ids)
     elif selected_tab == "Search Video by Text":
         # 在form中填入搜索关键字并提交
         if get_value('faiss_index') is None:
@@ -103,12 +97,16 @@ if __name__ == '__main__':
             search_query = st.text_input("Keywords")
             if search_query is not None and not search_query.isspace():
                 # 在这里添加视频检索的代码
-                search_query = get_value('clip_text_preprocess')(search_query)
-                paths, distances = search_videos(search_query, get_value('scene_list'))
+                search_query = en_tokenize(search_query) if lang == 'EN' else ch_tokenize(search_query)
+                query_res = search_videos(search_query, get_value('scene_list'))
+                if query_res is not None:
+                    scene_ids, paths, distances = query_res
 
-                # 显示搜索结果
-                for p, d in zip(paths, distances):
-                    st.write(f"Video: {p}\nDistance: {d}\n")
+                    for idx in range(len(scene_ids)):
+                        st.write(f"Video: {paths[idx]}\n Distance: {distances[idx]}")
+                        st.image(f'./scene_snapshot/{scene_ids[idx]}.jpg')
+                        st_ed = get_scene_metadata_by_id(scene_ids[idx])
+                        st.write(st_ed)
                 
     elif selected_tab == "Search Video by Image":
         # 在form中填入搜索关键字并提交
@@ -122,9 +120,13 @@ if __name__ == '__main__':
                 img = Image.open(uploaded_file).convert('RGB')
                 st.image(img, width=256)
                 # 在这里添加视频检索的代码
-                search_query = get_value('clip_img_preprocess')(img).unsqueeze(0)
-                paths, distances = search_videos(search_query, get_value('scene_list'))
-
-                # 显示搜索结果
-                for p, d in zip(paths, distances):
-                    st.write(f"Video: {p}\nDistance: {d}\n")
+                search_query = preprocess(img).unsqueeze(0)
+                query_res = search_videos(search_query, get_value('scene_list'))
+                if query_res is not None:
+                    scene_ids, paths, distances = query_res
+                    # 显示搜索结果
+                    for idx in range(len(scene_ids)):
+                        st.write(f"Video: {paths[idx]}\n Distance: {distances[idx]}")
+                        st.image(f'./scene_snapshot/{scene_ids[idx]}.jpg')
+                        st_ed = get_scene_metadata_by_id(scene_ids[idx])
+                        st.write(st_ed)

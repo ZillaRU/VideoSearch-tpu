@@ -18,6 +18,7 @@ Index diagrams
 |scene_embeddings|sceneID         |CLIP embedding of a scene|tensor data of a specific scene                     |
 |video_scene     |videoID         |sceneID list             |referencing which scenes belong to a specific video |
 |scene_video     |sceneID         |videoID                  |referencing which video the scene belongs to        |
+|scene_metadata  |sceneID         |metadata of a scene      |metadata about a scene (start_time, end_time)       |
 |----------------|----------------|-------------------------|----------------------------------------------------|
 
 """
@@ -29,6 +30,23 @@ def insert_video_metadata(videoID, data):
     b = json.dumps(data)
     level_instance = leveldb.LevelDB('./dbs/videometadata_index', create_if_missing=True)
     level_instance.Put(videoID.encode('utf-8'), b.encode('utf-8'))
+
+def get_video_metadata_by_id(id):
+    level_instance = leveldb.LevelDB('./dbs/videometadata_index')
+    b = level_instance.Get(bytes(id,'utf-8'))
+    return json.loads(b.decode('utf-8'))
+
+def insert_scene_metadata(sceneID, data):
+    data = (data[0].get_timecode(), data[1].get_timecode())
+    b = json.dumps(data)
+    level_instance = leveldb.LevelDB('./dbs/scenemetadata_index', create_if_missing=True)
+    level_instance.Put(sceneID.encode('utf-8'), b.encode('utf-8'))
+
+def get_scene_metadata_by_id(id):
+    level_instance = leveldb.LevelDB('./dbs/scenemetadata_index')
+    b = level_instance.Get(bytes(id,'utf-8'))
+    res = json.loads(b.decode('utf-8'))
+    return res
 
 def get_video_metadata_by_id(id):
     level_instance = leveldb.LevelDB('./dbs/videometadata_index')
@@ -60,14 +78,14 @@ def get_scene_by_video_id(id):
     b = level_instance.Get(bytes(id,'utf-8'))
     return b.decode('utf-8').split(',')
 
-def insert_scene_embeddings(sceneID, data):
-    level_instance = leveldb.LevelDB('./dbs/scene_embedding_index', create_if_missing=True)
-    level_instance.Put(sceneID.encode('utf-8'), data) 
+# def insert_scene_embeddings(sceneID, data):
+#     level_instance = leveldb.LevelDB('./dbs/scene_embedding_index', create_if_missing=True)
+#     level_instance.Put(sceneID.encode('utf-8'), data) 
 
-def get_tensor_by_scene_id(id):
-    level_instance = leveldb.LevelDB('./dbs/scene_embedding_index')
-    b = level_instance.Get(bytes(id,'utf-8'))
-    return BytesIO(b)
+# def get_tensor_by_scene_id(id):
+#     level_instance = leveldb.LevelDB('./dbs/scene_embedding_index')
+#     b = level_instance.Get(bytes(id,'utf-8'))
+#     return BytesIO(b)
 
 
 """
@@ -131,7 +149,7 @@ def search_videos(query, scene_list, top_n=2, query_mode='text'):
             video_metadata = get_video_metadata_by_id(videoID)
             res_path.append(video_metadata)
             res_distance.append(dis)
-        return res_path, res_distance
+        return match_list, res_path, res_distance
 
     else:
         print('Search Faiss index failed!')
