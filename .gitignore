@@ -1,4 +1,6 @@
 dbs/*index*
+dbs/CH/*
+dbs/EN/*
 doc
 *__pycache__*
 *.mp4
