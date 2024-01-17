@@ -40,7 +40,7 @@ def query_and_showresults(query, model, scene_list, query_mode, top_n=2):
             st.write({
                 'video_path': paths[idx],
                 'distance': distances[idx],
-                'duration': f'{strftime("%H:%M:%S", gmtime(5555))} ~ {strftime("%H:%M:%S", gmtime(5555))}'
+                'duration': f'{strftime("%H:%M:%S", gmtime(st_ed[0]))} ~ {strftime("%H:%M:%S", gmtime(st_ed[1]))}'
             })
 
 
