@@ -36,14 +36,13 @@ class SceneFeatures:
         sm.detect_scenes(video, frame_skip=3, show_progress=True)
         return sm.get_scene_list()
 
-
     def scene_features(self, model, video_path: str, no_of_samples: int = 5) -> typing.Dict:
         print(f'Collecting scenes in {video_path}')
         scenes = self.collect_scenes_in_video(video_path)
         cap = cv2.VideoCapture(video_path)
         scenes_frame_samples = []
         for scene_idx in range(len(scenes)):
-            scene_length = abs(scenes[scene_idx][0].frame_num - scenes[scene_idx][1].frame_num)
+            scene_length = abs(scenes[scene_idx][0].frame_num - scenes[scene_idx][1].frame_num)  # 绝对值
             every_n = round(scene_length/no_of_samples)
             local_samples = [(every_n * n) + scenes[scene_idx][0].frame_num for n in range(no_of_samples)]
             

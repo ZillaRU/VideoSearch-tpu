@@ -29,8 +29,9 @@ def load_database(lang):
         set_value('faiss_index', None)
         set_value('scene_list', None)
 
-def query_and_showresults(query, model, scene_list, query_mode, top_n=3):
-    query_res = search_videos(search_query, model, get_value('scene_list'), query_mode=query_mode, top_n=top_n)
+
+def query_and_showresults(query, model, scene_list, query_mode, top_n=5):
+    query_res = search_videos(query, model, scene_list, query_mode=query_mode, top_n=top_n)
     if query_res is not None:
         scene_ids, paths, distances = query_res
 
