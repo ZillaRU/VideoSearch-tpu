@@ -78,16 +78,6 @@ def get_scene_by_video_id(id):
     b = level_instance.Get(bytes(id,'utf-8'))
     return b.decode('utf-8').split(',')
 
-# def insert_scene_embeddings(sceneID, data):
-#     level_instance = leveldb.LevelDB('./dbs/scene_embedding_index', create_if_missing=True)
-#     level_instance.Put(sceneID.encode('utf-8'), data) 
-
-# def get_tensor_by_scene_id(id):
-#     level_instance = leveldb.LevelDB('./dbs/scene_embedding_index')
-#     b = level_instance.Get(bytes(id,'utf-8'))
-#     return BytesIO(b)
-
-
 """
 Build, update and search faiss index for scene embeddings
 """

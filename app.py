@@ -29,7 +29,8 @@ def load_database(lang):
         set_value('faiss_index', None)
         set_value('scene_list', None)
 
-def query_and_showresults(query, model, scene_list, query_mode, top_n=10):
+
+def query_and_showresults(query, model, scene_list, query_mode, top_n=5):
     query_res = search_videos(query, model, scene_list, query_mode=query_mode, top_n=top_n)
     if query_res is not None:
         scene_ids, paths, distances = query_res
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     from inference.video_features import video_features
 
     # 创建一个侧边栏
-    st.sidebar.title("🤩VideoSearch powered by Airbox🍉")
+    st.sidebar.title("🤩VideoSearch powered by Airbox")
     # 添加一个选项控件，用于选择当前显示的Tab
     selected_tab = st.sidebar.selectbox("Select", ["Upload Video", "Search Video by Text", "Search Video by Image"])
 
@@ -61,6 +62,15 @@ if __name__ == '__main__':
 
     # 根据选择的Tab显示不同的内容
     if selected_tab == "Upload Video":
+        
+        clear_button = st.sidebar.button("Clean all video collections")
+        if clear_button:
+            os.system(f'rm -rf {VIDEO_COLLECTION}/*')
+            os.system(f'rm -rf ./scene_snapshot/*')
+            os.system(f'rm -rf ./dbs/{lang}/*')
+            os.system(f'rm -rf ./dbs/*_index')
+            st.write('All video collections are removed.')
+        
         st.session_state['add_video'] = None
         def add_video_to_index(uploaded_videos):
             if uploaded_videos is not None and uploaded_videos != []:
