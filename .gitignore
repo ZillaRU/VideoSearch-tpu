@@ -4,3 +4,5 @@ doc
 *.mp4
 *.bmodel
 *.jpg
+.idea/
+.venv/

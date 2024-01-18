@@ -9,6 +9,8 @@ from transformers import CLIPProcessor, CLIPModel
 from ..clip_model.clip import _transform, load
 import uuid
 from time import strftime, gmtime
+from inference.utils.img_checker import ImgChecker
+import numpy as np
 
 
 class FrameNumTimecode():
@@ -24,8 +26,12 @@ class SceneFeatures:
         sm = sd.SceneManager()
         
         sm.add_detector(sd.ContentDetector(threshold=27.0))
+        print("content detecting...")
         sm.detect_scenes(video)
-        return sm.get_scene_list()
+        print('detect finish')
+        scenes_list = sm.get_scene_list()
+        # print(scenes_list[0])
+        return scenes_list
 
     # def clip_features_to_dic(self, num_of_scenes: int, clip_pixel_scenes: typing.List, scenes: typing.List[typing.Tuple[sd.FrameTimecode, sd.FrameTimecode]]) -> typing.Dict[str, any]:
     #     d = {}
@@ -45,7 +51,7 @@ class SceneFeatures:
         cap = cv2.VideoCapture(video_path)
         scenes_frame_samples = []
         for scene_idx in range(len(scenes)):
-            scene_length = abs(scenes[scene_idx][0].frame_num - scenes[scene_idx][1].frame_num)
+            scene_length = abs(scenes[scene_idx][0].frame_num - scenes[scene_idx][1].frame_num)  # 绝对值
             every_n = round(scene_length/no_of_samples)
             local_samples = [(every_n * n) + scenes[scene_idx][0].frame_num for n in range(3)]
             
@@ -71,10 +77,13 @@ class SceneFeatures:
 
         scene_ids = [str(uuid.uuid4()) for _ in range(len(_scenes))]
         scene_clip_embeddings = []
+        img_checker = ImgChecker()
+        pop_list = []
         for scene_idx in range(len(scenes_frame_samples)):
             scene_samples = scenes_frame_samples[scene_idx]
 
             clip_img_emb_list = []
+            get_snap = False
             for frame_sample in scene_samples:
                 cap.set(1, frame_sample)
                 ret, frame = cap.read()
@@ -82,12 +91,29 @@ class SceneFeatures:
                     print('breaks oops', ret, frame_sample, scene_idx, frame)
                     break
                 pil_image = Image.fromarray(frame[:,:,::-1])
-                if clip_img_emb_list == []:
-                    pil_image.convert("RGB").save(f'./scene_snapshot/{scene_ids[scene_idx]}.jpg')
+
+                if not get_snap:
+                    pil_image_numpy = np.array(pil_image)
+                    ret = img_checker.check_img(pil_image_numpy)
+                    if ret:
+                        pil_image.convert("RGB").save(f'./scene_snapshot/{scene_ids[scene_idx]}.jpg')
+                        get_snap = True
+
+
                 clip_pixel_values = self.clip_processor(pil_image)
                 clip_img_emb = model.encode_image(clip_pixel_values.unsqueeze(0))
-                clip_img_emb_list.append(clip_img_emb)
 
-            scene_clip_embeddings.append(torch.mean(torch.stack(clip_img_emb_list), dim=0))      
+                clip_img_emb_list.append(clip_img_emb)
+            if get_snap == False:
+                pop_list.append(scene_idx)
+                continue
+
+            scene_clip_embeddings.append(torch.mean(torch.stack(clip_img_emb_list), dim=0))
+
+        if pop_list is not None:
+            # print(pop_list)
+            for i in pop_list[::-1]:
+                scene_ids.pop(i)
+                _scenes.pop(i)
 
         return _scenes, scene_ids, scene_clip_embeddings

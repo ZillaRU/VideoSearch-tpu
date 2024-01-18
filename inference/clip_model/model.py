@@ -26,6 +26,7 @@ class CLIP():
         if self.name == 'EN':
             if not is_processing:
                 self.visual = EngineOV(f'./inference/clip_model/bmodels/{self.name}/clip_vit-b32-imgencoder-1_3_224_224.bmodel')
+                # self.visual = EngineOV(f'./inference/clip_model/bmodels/{self.name}/clip_vit-b32-imgencoder-8_3_224_224.bmodel')
                 self.text_encoder = EngineOV(f'./inference/clip_model/bmodels/{self.name}/clip-vitb32_textencoder_1684x_fp16_4-77_12ms.bmodel')
                 self.text_projection = torch.from_numpy(np.load('./inference/clip_model/bmodels/EN/text_projection512_512.npy'))
                 # self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))

@@ -29,8 +29,8 @@ def load_database(lang):
         set_value('faiss_index', None)
         set_value('scene_list', None)
 
-def query_and_showresults(query, model, scene_list, query_mode, top_n=2):
-    query_res = search_videos(search_query, model, get_value('scene_list'), query_mode=query_mode, top_n=top_n)
+def query_and_showresults(query, model, scene_list, query_mode, top_n=10):
+    query_res = search_videos(query, model, scene_list, query_mode=query_mode, top_n=top_n)
     if query_res is not None:
         scene_ids, paths, distances = query_res
 
@@ -40,7 +40,7 @@ def query_and_showresults(query, model, scene_list, query_mode, top_n=2):
             st.write({
                 'video_path': paths[idx],
                 'distance': distances[idx],
-                'duration': f'{strftime("%H:%M:%S", gmtime(5555))} ~ {strftime("%H:%M:%S", gmtime(5555))}'
+                'duration': f'{strftime("%H:%M:%S", gmtime(st_ed[0]))} ~ {strftime("%H:%M:%S", gmtime(st_ed[1]))}'
             })
 
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     from inference.video_features import video_features
 
     # 创建一个侧边栏
-    st.sidebar.title("🤩VideoSearch powered by Airbox")
+    st.sidebar.title("🤩VideoSearch powered by Airbox🍉")
     # 添加一个选项控件，用于选择当前显示的Tab
     selected_tab = st.sidebar.selectbox("Select", ["Upload Video", "Search Video by Text", "Search Video by Image"])
 
