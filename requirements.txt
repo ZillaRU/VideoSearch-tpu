@@ -3,6 +3,7 @@ leveldb
 ftfy
 tqdm
 streamlit==1.29.0
+scenedetect
 torch
 torchvision
 numpy
